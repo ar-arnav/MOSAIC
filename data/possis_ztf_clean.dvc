@@ -1,0 +1,6 @@
+outs:
+- md5: f8711fbd60f7cbc4cd3e20f543a31ad3.dir
+  size: 113734452
+  nfiles: 2716
+  hash: md5
+  path: possis_ztf_clean
