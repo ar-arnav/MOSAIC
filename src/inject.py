@@ -97,7 +97,7 @@ def inject_noise(df: pd.DataFrame, snr_threshold: float = 3.0, seed: int | None 
     sigmapsf = 1.0857/np.maximum(snr, 1e-5, out=snr)
     sigmapsf = sigmapsf.astype(np.float32, copy=False)
 
-    flux_err = (np.log(10, dtype=np.float32)/2.5) * sigmapsf * flux
+    flux_err = (np.log(10.0)/2.5) * sigmapsf * flux
 
     gaussian_noise = rng.normal(loc=0.0, scale = flux_err).astype(np.float32, copy=False)
     flux += gaussian_noise   
@@ -121,3 +121,25 @@ def inject_noise(df: pd.DataFrame, snr_threshold: float = 3.0, seed: int | None 
     df_detected["flux_err"] = flux_err[detected_mask]
 
     return df_detected.reset_index(drop=True)
+
+
+# Running the functions to get scaled and noisy KN data
+
+
+# Adding scaled distnace and recalculating flux_scale and magnitude factor for the KN data to simulate realistic observational conditions.
+
+# First adding a Uniform-in-Volume distribution to model the proper target distance distribution for Kilonovae. The target distance is set between 10-200 Mpc.
+
+d_min = 10
+d_max = 200
+
+d_vol = (np.random.uniform(0, 1) *(d_max**3 - d_min**3) + d_min**3)**(1/3)
+
+df_kn_scaled = scale_distance(df_kn, target_distance_mpc=d_vol, reference_distance_mpc=40)
+
+
+# Adding noise to the scaled KN data with a SNR threshold of 3.0 and a random seed of 42 for reproducibility
+df_kn_noisy = inject_noise(df_kn_scaled, snr_threshold=3.0, seed=42)
+
+# Combining data to be split into train, validate and test sets. The KN data is combined with the imposter data to create a single dataframe for splitting.
+df_all = pd.concat([df_kn_noisy] + list(df_imposter_dict.values()), ignore_index=True)
