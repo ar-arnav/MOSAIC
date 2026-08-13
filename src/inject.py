@@ -143,3 +143,43 @@ df_kn_noisy = inject_noise(df_kn_scaled, snr_threshold=3.0, seed=42)
 
 # Combining data to be split into train, validate and test sets. The KN data is combined with the imposter data to create a single dataframe for splitting.
 df_all = pd.concat([df_kn_noisy] + list(df_imposter_dict.values()), ignore_index=True)
+
+object_meta = df_all[["group", "label"]].drop_duplicates().reset_index(drop=True)
+
+# StratifiedGroupKFold implementation
+
+sgkf = StratifiedGroupKFold(n_splits=7, shuffle=True, random_state=42)
+ 
+train_val_idx, test_idx = next(sgkf.split(
+    X=object_meta["group"],
+    y=object_meta["label"], 
+    groups=object_meta["group"]
+    ))
+
+train_val_objects = set(object_meta.iloc[train_val_idx]["group"])
+test_objects = set(object_meta.iloc[test_idx]["group"])
+
+df_tv_meta = object_meta[
+    object_meta["group"].isin(train_val_objects)
+].reset_index(drop=True)
+
+sgkf_val = StratifiedGroupKFold(n_splits=6, shuffle=True, random_state=42)
+
+train_idx_sub, val_idx_sub = next(
+    sgkf_val.split(
+        X=df_tv_meta["group"],
+        y=df_tv_meta["label"],
+        groups=df_tv_meta["group"],
+    )
+)
+
+train_objects = set(df_tv_meta.iloc[train_idx_sub]["group"])
+val_objects = set(df_tv_meta.iloc[val_idx_sub]["group"])
+
+# Final split output of all data into train, validate and test sets based on the object groups obtained from the StratifiedGroupKFold splits.
+df_train = df_all[df_all["group"].isin(train_objects)].reset_index(drop=True)
+
+df_val = df_all[df_all["group"].isin(val_objects)].reset_index(drop=True)
+
+df_test = df_all[df_all["group"].isin(test_objects)].reset_index(drop=True)
+
