@@ -23,10 +23,20 @@ class LSTM_ZTF_dataset(Dataset):
 
         for group_id, group_df in grouped:
             features = ((group_df[self.feature_cols]).values).astype(np.float32)
-
             target = group_df['target'].iloc[0]
 
-            features = torch.tensor(features)
+            if np.all(features[:, 0] == 0) and target == 1:
+                continue
+
+            if len(features) > 150:
+                features = features[-150:]  # Cap background length
+
+            mean = np.mean(features, axis=0)
+            std = np.std(features, axis=0) + 1e-6
+            features = (features - mean) / std  # Normalize features
+            # -----------------------
+
+            features = torch.tensor(features, dtype=torch.float32)
             target = torch.tensor(target, dtype=torch.long)
 
             self.sequences.append(features)
