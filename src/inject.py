@@ -1,3 +1,4 @@
+import gc
 import os
 import numpy as np
 import pandas as pd
@@ -40,7 +41,7 @@ imposter_config = {
     "YSO": {"folder": "YSO", "limit": 4000}
 }
 
-df_imposter_dict = {}
+all_dfs = []
 
 for class_name, conf in imposter_config.items():
     class_folder = imposter_root / conf["folder"]
@@ -61,7 +62,7 @@ for class_name, conf in imposter_config.items():
 
     if dfs:
         df_imposter = pd.concat(dfs, ignore_index=True)
-        df_imposter_dict[class_name] = df_imposter
+        all_dfs.append(df_imposter)  # <-- Changed here
         print(f"Total number of {class_name} objects:", df_imposter["group"].nunique())
 
 # Degrading the POSSIS KN data to make it more realistic and similar to the imposters
@@ -130,19 +131,31 @@ def inject_noise(df: pd.DataFrame, snr_threshold: float = 3.0, seed: int | None 
 
 # First adding a Uniform-in-Volume distribution to model the proper target distance distribution for Kilonovae. The target distance is set between 10-200 Mpc.
 
-d_min = 10
-d_max = 200
+d_min, d_max = 10, 200
+unique_kn_objs = df_kn["group"].unique()
 
-d_vol = (np.random.uniform(0, 1) *(d_max**3 - d_min**3) + d_min**3)**(1/3)
+# Sample a unique distance for EVERY object
+u = np.random.uniform(0, 1, size=len(unique_kn_objs))
+dist_vols = (u * (d_max**3 - d_min**3) + d_min**3) ** (1/3)
+kn_dist_map = dict(zip(unique_kn_objs, dist_vols))
 
-df_kn_scaled = scale_distance(df_kn, target_distance_mpc=d_vol, reference_distance_mpc=40)
+# Update your scale_distance function to handle a per-row column or vectorized series
+df_kn["target_dist"] = df_kn["group"].map(kn_dist_map)
+df_kn_scaled = scale_distance(df_kn, target_distance_mpc=df_kn["target_dist"], reference_distance_mpc=40)
 
 
 # Adding noise to the scaled KN data with a SNR threshold of 3.0 and a random seed of 42 for reproducibility
 df_kn_noisy = inject_noise(df_kn_scaled, snr_threshold=3.0, seed=42)
 
-# Combining data to be split into train, validate and test sets. The KN data is combined with the imposter data to create a single dataframe for splitting.
-df_all = pd.concat([df_kn_noisy] + list(df_imposter_dict.values()), ignore_index=True)
+# Append the finished KN data to our master list
+all_dfs.append(df_kn_noisy)
+
+# Combine everything into df_all
+df_all = pd.concat(all_dfs, ignore_index=True)
+
+# Instantly dump unneeded memory copies
+del all_dfs, df_kn, df_kn_scaled, df_kn_noisy
+gc.collect()
 
 object_meta = df_all[["group", "label"]].drop_duplicates().reset_index(drop=True)
 
@@ -177,9 +190,9 @@ train_objects = set(df_tv_meta.iloc[train_idx_sub]["group"])
 val_objects = set(df_tv_meta.iloc[val_idx_sub]["group"])
 
 # Final split output of all data into train, validate and test sets based on the object groups obtained from the StratifiedGroupKFold splits.
-df_train = df_all[df_all["group"].isin(train_objects)].reset_index(drop=True)
+output_folder = Path("data/processed")
+output_folder.mkdir(parents=True, exist_ok=True)
 
-df_val = df_all[df_all["group"].isin(val_objects)].reset_index(drop=True)
-
-df_test = df_all[df_all["group"].isin(test_objects)].reset_index(drop=True)
-
+df_all[df_all["group"].isin(train_objects)].to_parquet(output_folder / "train.parquet", index=False)
+df_all[df_all["group"].isin(val_objects)].to_parquet(output_folder / "val.parquet", index=False)
+df_all[df_all["group"].isin(test_objects)].to_parquet(output_folder / "test.parquet", index=False)
