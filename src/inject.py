@@ -47,7 +47,8 @@ for class_name, conf in imposter_config.items():
     class_folder = imposter_root / conf["folder"]
 
     files = sorted(list(class_folder.glob("*.parquet")))
-
+    files = files[:conf["limit"]]
+    
 # Assigning group and label columns to each imposter dataframe and storing them in a dictionary
 
     dfs = []
