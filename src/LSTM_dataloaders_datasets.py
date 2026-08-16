@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader, Dataset
 class LSTM_ZTF_dataset(Dataset):
     def __init__(self, parquet_path: str, label_col: str = "label", max_len: int = 20, min_len: int = 3):
         df = pd.read_parquet(parquet_path)
-        df['target'] = (df[label_col] == 'Kilonovae').astype(int)
-        grouped = df.groupby('group')
+        df['target'] = df['label_class'].astype(int)
+        grouped = df.groupby('group_id')
 
         self.sequences = [] 
         self.labels = []
