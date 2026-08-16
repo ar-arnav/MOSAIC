@@ -1,199 +1,186 @@
-import gc
 import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import StratifiedGroupKFold 
 
-# Getting KN data to split from raw parquet files
+def scale_distance(df, reference_distance: int = 40):
+    max_distance = 200
+    min_distance = 10
 
-kn_folder = Path("data/possis_ztf_clean")
+    # Uniformly sample in 3D volume, then convert back to distance
+    target_distance = (np.random.uniform(0, 1) * ((max_distance)**3 - (min_distance)**3) + (min_distance)**3)**(1/3)
+    delta_m = 5 * np.log10(target_distance / reference_distance)
 
-kn_files = list(kn_folder.glob("*.parquet"))
+    df = df.copy()
+    df['magpsf'] += delta_m
+    df['flux'] *= 10**(-0.4 * delta_m)
+    df['flux_err'] *= 10**(-0.4 * delta_m)
 
-df_kn_list = []
+    return df
 
-for file in kn_files:
-    df = pd.read_parquet(file)
-    df_kn_list.append(df)
-
-df_kn = pd.concat(df_kn_list, ignore_index=True)
-
-# Grouping objects based on their Object_ID (Viewing angle) and splitting them into train and test sets using StratifiedGroupKFold
-
-df_kn["group"] = df_kn["objectId"]
-df_kn["label"] = 'Kilonovae'
-
-print("Total number of Kilonovae objects:", df_kn["group"].nunique())
-
-# Getting Imposter data to split from raw parquet files
-imposter_root = Path("data/raw")
-
-imposter_config = {
-    "AGN": {"folder": "AGN", "limit": 25000},
-    "E": {"folder": "E", "limit": 20000},
-    "CV": {"folder": "CV", "limit": 15000},
-    "LPV": {"folder": "LPV", "limit": 10000},
-    "RR Lyrae": {"folder": "RR_Lyrae", "limit": 10000},
-    "SNIa": {"folder": "SNIa", "limit": 8000},
-    "SNIbc": {"folder": "SNIbc", "limit": 8000},
-    "SNII": {"folder": "SNIIn", "limit": 5000},
-    "YSO": {"folder": "YSO", "limit": 4000}
-}
-
-all_dfs = []
-
-for class_name, conf in imposter_config.items():
-    class_folder = imposter_root / conf["folder"]
-
-    files = sorted(list(class_folder.glob("*.parquet")))
-    files = files[:conf["limit"]]
+def generate_synthetic_kilonovae(kn_path: str, ztf_skeleton_path: str) -> pd.DataFrame:
+    kn_path = Path(os.path.expanduser(kn_path))
+    ztf_skeleton_path = Path(os.path.expanduser(ztf_skeleton_path))
     
-# Assigning group and label columns to each imposter dataframe and storing them in a dictionary
+    synthetic_kn = []
+    synthetic_files = list(ztf_skeleton_path.rglob("*.parquet"))
 
-    dfs = []
-    for file in files:
+    if not synthetic_files:
+        raise ValueError(f"No ZTF skeleton files found in {ztf_skeleton_path}")
+
+    for file in kn_path.rglob("*.parquet"):
         df = pd.read_parquet(file)
 
-        df["group"] = f"{class_name}_{file.stem}"
-        df["label"] = class_name
-        df["source_file"] = str(file)
+        for angle, angle_group in df.groupby('angle_idx'):
+            scaled_df = scale_distance(angle_group)
+            max_kn_time = scaled_df['time_day'].max()
 
-        dfs.append(df)
+            chosen = np.random.choice(synthetic_files)
+            synthetic_df = pd.read_parquet(chosen)
 
-    if dfs:
-        df_imposter = pd.concat(dfs, ignore_index=True)
-        all_dfs.append(df_imposter)  # <-- Changed here
-        print(f"Total number of {class_name} objects:", df_imposter["group"].nunique())
+            trimmed_ztf_df = synthetic_df[synthetic_df['time_day'] <= max_kn_time].copy()
 
-# Degrading the POSSIS KN data to make it more realistic and similar to the imposters
+            if len(trimmed_ztf_df) == 0:
+                continue
 
-# Distance Scaling
-def scale_distance(df:pd.DataFrame, target_distance_mpc: float, reference_distance_mpc: float = 40) -> pd.DataFrame:
-    delta_m = 5 * np.log10(target_distance_mpc / reference_distance_mpc)
-    df_scaled = df.copy()
+            synthetic_alert = trimmed_ztf_df.copy()
+            interpolated_mags = np.empty_like(trimmed_ztf_df['magpsf'].values)
 
-    df_scaled["magpsf"] += delta_m
+            for fid in trimmed_ztf_df['fid'].unique():
+                synthetic_mask = trimmed_ztf_df['fid'] == fid
+                possis_mask = scaled_df['fid'] == fid
 
-    flux_scale_factor = 10 ** (-0.4 * delta_m)
-    df_scaled["flux"] *= flux_scale_factor
+                if np.sum(synthetic_mask) > 1 and np.sum(possis_mask) > 1:
+                    # CRITICAL FIX: Sort POSSIS data by time to satisfy np.interp monotonicity requirement
+                    sorted_possis = scaled_df.loc[possis_mask].sort_values('time_day')
+                    
+                    interpolated_mags[synthetic_mask] = np.interp(
+                        trimmed_ztf_df.loc[synthetic_mask, 'time_day'].values,
+                        sorted_possis['time_day'].values,
+                        sorted_possis['magpsf'].values,
+                        left=np.nan, right=np.nan
+                    )
+                else:
+                    interpolated_mags[synthetic_mask] = np.nan
 
-    df_scaled["distance_mpc"] = target_distance_mpc
-    return df_scaled
+            # Assign the interpolated magnitudes
+            synthetic_alert['magpsf'] = interpolated_mags
+            
+            # CRITICAL FIX: Drop rows where POSSIS didn't simulate that filter band (e.g., ZTF 'i' band)
+            synthetic_alert.dropna(subset=['magpsf'], inplace=True)
 
-# Injecting Noise into the POSSIS KN data to simulate realistic observational conditions
-def inject_noise(df: pd.DataFrame, snr_threshold: float = 3.0, seed: int | None = None, rng : np.random.Generator | None = None) -> pd.DataFrame:
+            # If too much of the light curve was dropped, skip this object
+            if len(synthetic_alert) < 3: # 3 is your min_points
+                continue
 
-    """ If no random number generator is provided, create one with the given seed.
-        Thus provide either rng or seed not both. If both are None, a new random generator will be created with a random seed. """
+            # Explicitly match the exact schema columns
+            synthetic_alert['angle_idx'] = np.int8(-1) 
+            synthetic_alert['label_class'] = 1
+            synthetic_alert['subclass'] = 'Kilonovae'
+            synthetic_alert['group_id'] = f"KN_{file.stem}_angle_{angle}"
+            
+            ZP = 23.9  
+            old_flux = synthetic_alert['flux'].copy()
+            synthetic_alert['flux'] = 10**(-0.4 * (synthetic_alert['magpsf'] - ZP))
+            
+            flux_ratio = np.where(old_flux > 0, synthetic_alert['flux'] / old_flux, 1.0)
+            synthetic_alert['flux_err'] *= flux_ratio
 
-    if rng is None:
-        rng = np.random.default_rng(seed)
+            synthetic_kn.append(synthetic_alert)
 
-    magpsf = df["magpsf"].to_numpy(dtype=np.float32, copy=True)
-    diffmaglim = df["diffmaglim"].to_numpy(dtype=np.float32, copy=False)
-    flux = df["flux"].to_numpy(dtype=np.float32, copy=True)
+    return pd.concat(synthetic_kn, ignore_index=True)
 
-    snr = 5 * np.power(10, -0.4 * (magpsf - diffmaglim))
+imposter_config = {
+    'AGN': '~/MOSAIC/data/raw/AGN',
+    'Blazar': '~/MOSAIC/data/raw/Blazar',
+    'CV/Nova': '~/MOSAIC/data/raw/CV/Nova',
+    'E': '~/MOSAIC/data/raw/E',
+    'LPV': '~/MOSAIC/data/raw/LPV',
+    'QSO': '~/MOSAIC/data/raw/QSO',
+    'RRL': '~/MOSAIC/data/raw/RRL',
+    'SLSN': '~/MOSAIC/data/raw/SLSN',
+    'SNIa': '~/MOSAIC/data/raw/SNIa',
+    'SNII': '~/MOSAIC/data/raw/SNII',
+    'SNIbc': '~/MOSAIC/data/raw/SNIbc',
+    'YSO': '~/MOSAIC/data/raw/YSO',
+}
 
-    sigmapsf = 1.0857/np.maximum(snr, 1e-5, out=snr)
-    sigmapsf = sigmapsf.astype(np.float32, copy=False)
+def load_imposter_dataset(imposter_config: dict, max_days: float = 30.0, min_points: int = 2) -> pd.DataFrame:
+    imposter_alerts = []
 
-    flux_err = (np.log(10.0)/2.5) * sigmapsf * flux
+    for subclass, path_str in imposter_config.items():
+        folder = Path(os.path.expanduser(path_str))
+        if not folder.exists():
+            continue
 
-    gaussian_noise = rng.normal(loc=0.0, scale = flux_err).astype(np.float32, copy=False)
-    flux += gaussian_noise   
+        for file in folder.rglob("*.parquet"):
+            df = pd.read_parquet(file)
 
-    snr_obs = np.zeros_like(snr, dtype=np.float32)
-    valid_err = flux_err > 0
-    np.divide(flux, flux_err, out=snr_obs, where=valid_err)
+            trimmed_df = df[df['time_day'] <= max_days].copy()
 
-    pos_mask = flux > 0
-    valid_snr_pos = pos_mask & (snr_obs > 0)
+            if len(trimmed_df) < min_points:
+                continue
 
-    magpsf[valid_snr_pos] = diffmaglim[valid_snr_pos] -2.5 * np.log10(snr_obs[valid_snr_pos]/5.0).astype(np.float32)
+            trimmed_df['label_class'] = 0
+            trimmed_df['subclass'] = subclass
+            trimmed_df['group_id'] = f"{subclass}_{file.stem}"
 
-    detected_mask = snr_obs >= snr_threshold
+            imposter_alerts.append(trimmed_df)
 
-    df_detected = df[detected_mask].copy()
+    if not imposter_alerts:
+        raise ValueError("No valid imposter files were found in the specified paths.")
 
-    df_detected["magpsf"] = magpsf[detected_mask]
-    df_detected["sigmapsf"] = sigmapsf[detected_mask]
-    df_detected["flux"] = flux[detected_mask]
-    df_detected["flux_err"] = flux_err[detected_mask]
+    return pd.concat(imposter_alerts, ignore_index=True)
 
-    return df_detected.reset_index(drop=True)
+if __name__ == "__main__":
+    print("Generating synthetic Kilonovae...")
+    final_synthetic_dataset = generate_synthetic_kilonovae(
+        kn_path="~/MOSAIC/data/possis_ztf_clean",
+        ztf_skeleton_path="~/MOSAIC/data/raw/SNIbc"
+    )
 
+    print("Loading Imposter Dataset...")
+    final_imposter_dataset = load_imposter_dataset(imposter_config)
 
-# Running the functions to get scaled and noisy KN data
+    print("Combining datasets...")
+    master_dataset = pd.concat([final_synthetic_dataset, final_imposter_dataset], ignore_index=True)
 
+    # Remove exact duplicate light curve points
+    master_dataset = master_dataset.drop_duplicates(
+        subset=['group_id', 'time_day', 'fid'], 
+        keep='first'
+    ).reset_index(drop=True)
 
-# Adding scaled distnace and recalculating flux_scale and magnitude factor for the KN data to simulate realistic observational conditions.
+    # Stratified Group K-Fold Splitting
+    unique_objects = master_dataset[['group_id', 'label_class']].drop_duplicates().reset_index(drop=True)
+    splitter = StratifiedGroupKFold(n_splits=5, shuffle=True,  random_state=42)
 
-# First adding a Uniform-in-Volume distribution to model the proper target distance distribution for Kilonovae. The target distance is set between 10-200 Mpc.
-
-d_min, d_max = 10, 200
-unique_kn_objs = df_kn["group"].unique()
-
-# Sample a unique distance for EVERY object
-u = np.random.uniform(0, 1, size=len(unique_kn_objs))
-dist_vols = (u * (d_max**3 - d_min**3) + d_min**3) ** (1/3)
-kn_dist_map = dict(zip(unique_kn_objs, dist_vols))
-
-# Update your scale_distance function to handle a per-row column or vectorized series
-df_kn["target_dist"] = df_kn["group"].map(kn_dist_map)
-df_kn_scaled = scale_distance(df_kn, target_distance_mpc=df_kn["target_dist"], reference_distance_mpc=40)
-
-
-# Adding noise to the scaled KN data with a SNR threshold of 3.0 and a random seed of 42 for reproducibility
-df_kn_noisy = inject_noise(df_kn_scaled, snr_threshold=3.0, seed=42)
-
-# Append the finished KN data to our master list
-all_dfs.append(df_kn_noisy)
-
-# Combine everything into df_all
-df_all = pd.concat(all_dfs, ignore_index=True)
-
-# Instantly dump unneeded memory copies
-del all_dfs, df_kn, df_kn_scaled, df_kn_noisy
-gc.collect()
-
-object_meta = df_all[["group", "label"]].drop_duplicates().reset_index(drop=True)
-
-# StratifiedGroupKFold implementation
-
-sgkf = StratifiedGroupKFold(n_splits=7, shuffle=True, random_state=42)
- 
-train_val_idx, test_idx = next(sgkf.split(
-    X=object_meta["group"],
-    y=object_meta["label"], 
-    groups=object_meta["group"]
+    train_val_idx, test_idx = next(splitter.split(
+        X=np.zeros(len(unique_objects)), 
+        y=unique_objects['label_class'], 
+        groups=unique_objects['group_id']
     ))
 
-train_val_objects = set(object_meta.iloc[train_val_idx]["group"])
-test_objects = set(object_meta.iloc[test_idx]["group"])
+    train_val_df = master_dataset[master_dataset['group_id'].isin(unique_objects.iloc[train_val_idx]['group_id'])].reset_index(drop=True)
+    test_df = master_dataset[master_dataset['group_id'].isin(unique_objects.iloc[test_idx]['group_id'])].reset_index(drop=True)
 
-df_tv_meta = object_meta[
-    object_meta["group"].isin(train_val_objects)
-].reset_index(drop=True)
+    # Second Split: Train (80%) vs Val (20%)
+    tv_unique = train_val_df[['group_id', 'label_class']].drop_duplicates().reset_index(drop=True)
+    
+    train_idx, val_idx = next(splitter.split(
+        X=np.zeros(len(tv_unique)), 
+        y=tv_unique['label_class'], 
+        groups=tv_unique['group_id']
+    ))
 
-sgkf_val = StratifiedGroupKFold(n_splits=6, shuffle=True, random_state=42)
+    train_df = train_val_df[train_val_df['group_id'].isin(tv_unique.iloc[train_idx]['group_id'])].reset_index(drop=True)
+    val_df = train_val_df[train_val_df['group_id'].isin(tv_unique.iloc[val_idx]['group_id'])].reset_index(drop=True)
 
-train_idx_sub, val_idx_sub = next(
-    sgkf_val.split(
-        X=df_tv_meta["group"],
-        y=df_tv_meta["label"],
-        groups=df_tv_meta["group"],
-    )
-)
+    # Final Export
+    print("Saving parquet files...")
+    train_df.to_parquet('data/processed/train.parquet', index=False)
+    val_df.to_parquet('data/processed/val.parquet', index=False)
+    test_df.to_parquet('data/processed/test.parquet', index=False)
 
-train_objects = set(df_tv_meta.iloc[train_idx_sub]["group"])
-val_objects = set(df_tv_meta.iloc[val_idx_sub]["group"])
-
-# Final split output of all data into train, validate and test sets based on the object groups obtained from the StratifiedGroupKFold splits.
-output_folder = Path("data/processed")
-output_folder.mkdir(parents=True, exist_ok=True)
-
-df_all[df_all["group"].isin(train_objects)].to_parquet(output_folder / "train.parquet", index=False)
-df_all[df_all["group"].isin(val_objects)].to_parquet(output_folder / "val.parquet", index=False)
-df_all[df_all["group"].isin(test_objects)].to_parquet(output_folder / "test.parquet", index=False)
+    print(f"Done! Train: {train_df['group_id'].nunique()} objects | Val: {val_df['group_id'].nunique()} objects | Test: {test_df['group_id'].nunique()} objects")
