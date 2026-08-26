@@ -17,7 +17,7 @@ def scale_distance(df, reference_distance: int = 40):
     df['flux'] *= 10**(-0.4 * delta_m)
     df['flux_err'] *= 10**(-0.4 * delta_m)
 
-    return df
+    return df, target_distance
 
 def generate_synthetic_kilonovae(kn_path: str, ztf_skeleton_path: str) -> pd.DataFrame:
     kn_path = Path(os.path.expanduser(kn_path))
@@ -33,7 +33,9 @@ def generate_synthetic_kilonovae(kn_path: str, ztf_skeleton_path: str) -> pd.Dat
         df = pd.read_parquet(file)
 
         for angle, angle_group in df.groupby('angle_idx'):
-            scaled_df = scale_distance(angle_group)
+            scaled_df, target_distance = scale_distance(angle_group)
+            scaled_df['dist_mpc'] = target_distance
+
             max_kn_time = scaled_df['time_day'].max()
 
             chosen = np.random.choice(synthetic_files)
@@ -124,6 +126,7 @@ def load_imposter_dataset(imposter_config: dict, max_days: float = 30.0, min_poi
 
             trimmed_df['label_class'] = 0
             trimmed_df['subclass'] = subclass
+            trimmed_df['dist_mpc'] = (np.random.uniform(0, 1, size=len(trimmed_df)) * (2000**3 - 10**3) + 10**3)**(1/3)
             trimmed_df['group_id'] = f"{subclass}_{file.stem}"
 
             imposter_alerts.append(trimmed_df)
