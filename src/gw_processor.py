@@ -72,7 +72,3 @@ class GW_data:
         gaussian = 1/ (np.sqrt(2*np.pi)*sigma) * np.exp(-0.5*((dist_mpc - mu)/(sigma))**2)
         dp_dv = norm * gaussian * prob_2d
         return self.credible_levels[row_idx], dp_dv
-
-
-mapper = GW_data("~/MOSAIC/data/raw/GW/0.fits")
-print(mapper.evaluate_candidate(15.0, 80.0, 500.0))
