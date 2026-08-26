@@ -45,7 +45,7 @@ class GW_data:
     
         idx = np.searchsorted(self.uniq, target_uniq)
     
-        if self.uniq[idx] == target_uniq:
+        if idx < len(self.uniq) and self.uniq[idx] == target_uniq:
             row_idx = idx
         else:
             curr_level = self.max_level
@@ -63,6 +63,10 @@ class GW_data:
                 if curr_idx < len(self.uniq) and self.uniq[curr_idx] == curr_uniq:
                     row_idx = curr_idx
                     break
+        if row_idx is None:
+            return 1.0, 0.0
+
+
     
         mu = self.GW_data['DISTMU'][row_idx]
         sigma = self.GW_data['DISTSIGMA'][row_idx]
