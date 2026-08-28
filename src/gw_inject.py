@@ -20,7 +20,7 @@ test_maps = all_files[int(0.9 * len(all_files)):]
 # 3. The function
 def generate_pairs(optical_path, gw_maps, out_path):
     optical_df = pd.read_parquet(optical_path)
-    unique_ids = optical_df['group_id'].unique()
+    unique_ids = optical_df['objectId'].unique()  # Changed
     
     results = []
     for map_path in gw_maps:
@@ -29,24 +29,22 @@ def generate_pairs(optical_path, gw_maps, out_path):
         print(f'Processed {map_path}...')
 
         for i in batch:
-            row = optical_df[optical_df['group_id'] == i].iloc[0]
+            row = optical_df[optical_df['objectId'] == i].iloc[0]  # Changed
             label = row['label_class']
             dist = row['dist_mpc']
             
             if label == 1:
-                if np.random.rand() < 0.5:
-                    pix_idx = np.random.choice(len(gw.pixel_prob), p=gw.pixel_prob)
-                    uniq_val = gw.uniq[pix_idx]
-                    lvl, px = ah.uniq_to_level_ipix(uniq_val)
-                    ns = ah.level_to_nside(lvl)
-                    lon, lat = ah.healpix_to_lonlat(px, ns, order='nested')
-                    ra = np.degrees(lon).value + np.random.uniform(-0.1, 0.1)
-                    dec = np.degrees(lat).value + np.random.uniform(-0.1, 0.1)
-                else:
-                    ra = np.random.uniform(0, 360)
-                    dec = np.random.uniform(-90, 90)
+                # KNe: always inside map
+                pix_idx = np.random.choice(len(gw.pixel_prob), p=gw.pixel_prob)
+                uniq_val = gw.uniq[pix_idx]
+                lvl, px = ah.uniq_to_level_ipix(uniq_val)
+                ns = ah.level_to_nside(lvl)
+                lon, lat = ah.healpix_to_lonlat(px, ns, order='nested')
+                ra = np.degrees(lon).value + np.random.uniform(-0.1, 0.1)
+                dec = np.degrees(lat).value + np.random.uniform(-0.1, 0.1)
             else:
-                if np.random.rand() < 0.5:
+                # Imposter: 70% random, 30% inside
+                if np.random.rand() < 0.3:
                     pix_idx = np.random.choice(len(gw.pixel_prob), p=gw.pixel_prob)
                     uniq_val = gw.uniq[pix_idx]
                     lvl, px = ah.uniq_to_level_ipix(uniq_val)
@@ -59,12 +57,12 @@ def generate_pairs(optical_path, gw_maps, out_path):
                     dec = np.random.uniform(-90, 90)
 
             cred_level, dp_dv = gw.evaluate_candidate(ra, dec, dist)
-            results.append({'group_id': i, 'label': label, 'gw_cred_level': cred_level, 'gw_dp_dv': dp_dv})
+            results.append({'object_id': i, 'label': label, 'gw_cred_level': 1 - cred_level, 'gw_dp_dv': dp_dv})
 
-    # Save inside the function
     df_results = pd.DataFrame(results)
     df_results.to_parquet(out_path, index=False)
     print(f"Saved to {out_path}")
+    
 
 # 4. Execute for all splits
 if __name__ == "__main__":
