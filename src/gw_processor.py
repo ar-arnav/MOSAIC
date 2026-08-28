@@ -26,6 +26,16 @@ class GW_data:
 
         self.pixel_prob = probdensity * level_pixels
 
+        # --- EXPOSE 3D DISTANCE POSTERIORS ---
+        self.distmu = np.array(self.GW_data['DISTMU'])
+        
+        # Check column name variation (DISTSIGMA vs DISTSIG)
+        if 'DISTSIGMA' in self.GW_data.colnames:
+            self.distsig = np.array(self.GW_data['DISTSIGMA'])
+        else:
+            self.distsig = np.array(self.GW_data['DISTSIG'])
+        # ------------------------------------
+
         prob_sorted = np.argsort(self.pixel_prob)[::-1]
         cumsum_result = np.cumsum(self.pixel_prob[prob_sorted])
         total_prob = cumsum_result / cumsum_result[-1]
@@ -52,9 +62,7 @@ class GW_data:
             curr_ipix = target_ipix
     
             while curr_level >= self.min_level:
-            
-                curr_ipix = curr_ipix//4
-                
+                curr_ipix = curr_ipix // 4
                 curr_level -= 1
     
                 curr_uniq = ah.level_ipix_to_uniq(curr_level, curr_ipix)
@@ -63,16 +71,15 @@ class GW_data:
                 if curr_idx < len(self.uniq) and self.uniq[curr_idx] == curr_uniq:
                     row_idx = curr_idx
                     break
+
         if row_idx is None:
             return 1.0, 0.0
 
-
-    
         mu = self.GW_data['DISTMU'][row_idx]
-        sigma = self.GW_data['DISTSIGMA'][row_idx]
+        sigma = self.distsig[row_idx]
         norm = self.GW_data['DISTNORM'][row_idx]
         prob_2d = self.GW_data['PROBDENSITY'][row_idx]
     
-        gaussian = 1/ (np.sqrt(2*np.pi)*sigma) * np.exp(-0.5*((dist_mpc - mu)/(sigma))**2)
+        gaussian = 1 / (np.sqrt(2 * np.pi) * sigma) * np.exp(-0.5 * ((dist_mpc - mu) / sigma) ** 2)
         dp_dv = norm * gaussian * prob_2d
         return self.credible_levels[row_idx], dp_dv

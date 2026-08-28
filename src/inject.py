@@ -127,7 +127,7 @@ def load_imposter_dataset(imposter_config: dict, max_days: float = 30.0, min_poi
 
             trimmed_df['label_class'] = 0
             trimmed_df['subclass'] = subclass
-            trimmed_df['dist_mpc'] = (np.random.uniform(0, 1, size=len(trimmed_df)) * (2000**3 - 10**3) + 10**3)**(1/3)
+            trimmed_df['dist_mpc'] = (np.random.uniform(0, 1, size=len(trimmed_df)) * (200**3 - 10**3) + 10**3)**(1/3)
             trimmed_df['group_id'] = f"{subclass}_{file.stem}"
 
             imposter_alerts.append(trimmed_df)
