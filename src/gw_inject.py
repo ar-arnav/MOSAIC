@@ -13,28 +13,43 @@ all_files = glob.glob(os.path.join(gw_dir, "*.fits"))
 # 2. Split files ONCE globally
 np.random.seed(42)
 np.random.shuffle(all_files)
-train_maps = all_files[:int(0.8 * len(all_files))]
-val_maps = all_files[int(0.8 * len(all_files)):int(0.9 * len(all_files))]
-test_maps = all_files[int(0.9 * len(all_files)):]
+
 
 # 3. The function
 def generate_pairs(optical_path, gw_maps, out_path):
     optical_df = pd.read_parquet(optical_path)
-    unique_ids = optical_df['objectId'].unique()  # Changed
+    
+    # Stratified sampling
+    kn_ids = optical_df[optical_df['label_class'] == 1]['objectId'].unique()
+    snibc_ids = optical_df[optical_df['label_class'] == 0][optical_df['subclass'] == 'SNIbc']['objectId'].unique()
+    other_imp_ids = optical_df[optical_df['label_class'] == 0][optical_df['subclass'] != 'SNIbc']['objectId'].unique()
+    
+    min_kn = 25
+    min_snibc = 10
+    total_size = 200
     
     results = []
     for map_path in gw_maps:
-        batch = np.random.choice(unique_ids, size=50, replace=False)
+        # Guaranteed samples
+        kn_sample = np.random.choice(kn_ids, size=min(min_kn, len(kn_ids)), replace=False)
+        snibc_sample = np.random.choice(snibc_ids, size=min(min_snibc, len(snibc_ids)), replace=False)
+        
+        # Fill rest randomly
+        remaining = total_size - len(kn_sample) - len(snibc_sample)
+        other_sample = np.random.choice(other_imp_ids, size=min(remaining, len(other_imp_ids)), replace=False)
+        
+        batch = np.concatenate([kn_sample, snibc_sample, other_sample])
+        np.random.shuffle(batch)
+        
         gw = GW_data(map_path)
         print(f'Processed {map_path}...')
 
         for i in batch:
-            row = optical_df[optical_df['objectId'] == i].iloc[0]  # Changed
+            row = optical_df[optical_df['objectId'] == i].iloc[0]
             label = row['label_class']
             dist = row['dist_mpc']
             
             if label == 1:
-                # KNe: always inside map
                 pix_idx = np.random.choice(len(gw.pixel_prob), p=gw.pixel_prob)
                 uniq_val = gw.uniq[pix_idx]
                 lvl, px = ah.uniq_to_level_ipix(uniq_val)
@@ -43,7 +58,6 @@ def generate_pairs(optical_path, gw_maps, out_path):
                 ra = np.degrees(lon).value + np.random.uniform(-0.1, 0.1)
                 dec = np.degrees(lat).value + np.random.uniform(-0.1, 0.1)
             else:
-                # Imposter: 70% random, 30% inside
                 if np.random.rand() < 0.3:
                     pix_idx = np.random.choice(len(gw.pixel_prob), p=gw.pixel_prob)
                     uniq_val = gw.uniq[pix_idx]
@@ -68,16 +82,16 @@ def generate_pairs(optical_path, gw_maps, out_path):
 if __name__ == "__main__":
     generate_pairs(
         optical_path=os.path.expanduser("~/MOSAIC/data/processed/train.parquet"),
-        gw_maps=train_maps,
+        gw_maps=all_files,
         out_path="data/processed/train_gw_paired.parquet"
     )
     generate_pairs(
         optical_path=os.path.expanduser("~/MOSAIC/data/processed/val.parquet"),
-        gw_maps=val_maps,
+        gw_maps=all_files,
         out_path="data/processed/val_gw_paired.parquet"
     )
     generate_pairs(
         optical_path=os.path.expanduser("~/MOSAIC/data/processed/test.parquet"),
-        gw_maps=test_maps,
+        gw_maps=all_files,
         out_path="data/processed/test_gw_paired.parquet"
     )
