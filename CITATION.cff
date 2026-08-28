@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use this code or data, please cite:"
+title: "MOSAIC: Multi-Modal Optical Synthesis for Astrophysical Classification"
+authors:
+  - family-names: Shirke
+    given-names: Arnav
+    orcid: "https://orcid.org/0009-0000-5415-9621"
+keywords:
+  - kilonova
+  - gravitational waves
+  - ZTF
+  - machine learning
+  - multimodal fusion
+references:
+  - type: article
+    authors:
+      - family-names: Förster
+        given-names: F.
+    title: "The ALeRCE Alert Broker: Characterization of the Transient and Variable Sky with ZTF"
+    journal: "AJ"
+    year: 2021
+    doi: "10.3847/1538-3881/abdb35"
+    - type: article
+    authors:
+      - family-names: Bulla
+        given-names: M.
+    title: "POSSIS: Predicting spectra, light curves, and polarisation for multidimensional models of stripping in binary neutron-star mergers"
+    journal: "MNRAS"
+    year: 2019
+    doi: "10.1093/mnras/stz531"
+  - type: article
+    authors:
+      - family-names: Kunnumkai
+        given-names: K.
+    title: "Detecting Electromagnetic Counterparts to LIGO/Virgo/KAGRA Gravitational-wave Events with DECam: Neutron Star Mergers"
+    journal: "ApJ"
+    year: 2025
+    doi: "10.3847/1538-4357/ae0336"
