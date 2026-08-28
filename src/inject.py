@@ -81,6 +81,7 @@ def generate_synthetic_kilonovae(kn_path: str, ztf_skeleton_path: str) -> pd.Dat
             synthetic_alert['label_class'] = 1
             synthetic_alert['subclass'] = 'Kilonovae'
             synthetic_alert['group_id'] = f"KN_{file.stem}_angle_{angle}"
+            synthetic_alert['dist_mpc'] = target_distance
             
             ZP = 23.9  
             old_flux = synthetic_alert['flux'].copy()
