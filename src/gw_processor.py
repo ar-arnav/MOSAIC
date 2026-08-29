@@ -27,13 +27,21 @@ class GW_data:
         self.pixel_prob = probdensity * level_pixels
 
         # --- EXPOSE 3D DISTANCE POSTERIORS ---
-        self.distmu = np.array(self.GW_data['DISTMU'])
+        self.distmu = np.array(self.GW_data['DISTMU'], dtype=np.float64)
         
-        # Check column name variation (DISTSIGMA vs DISTSIG)
         if 'DISTSIGMA' in self.GW_data.colnames:
-            self.distsig = np.array(self.GW_data['DISTSIGMA'])
+            self.distsig = np.array(self.GW_data['DISTSIGMA'], dtype=np.float64)
         else:
-            self.distsig = np.array(self.GW_data['DISTSIG'])
+            self.distsig = np.array(self.GW_data['DISTSIG'], dtype=np.float64)
+        
+        self.distnorm = np.array(self.GW_data['DISTNORM'], dtype=np.float64)
+        
+        # Pre-compute mask for pixels with VALID distance information
+        self.has_valid_distance = (
+            (self.distmu > 0) & 
+            (self.distsig > 0) & 
+            (self.distnorm > 0)
+        )
         # ------------------------------------
 
         prob_sorted = np.argsort(self.pixel_prob)[::-1]
@@ -75,11 +83,15 @@ class GW_data:
         if row_idx is None:
             return 1.0, 0.0
 
-        mu = self.GW_data['DISTMU'][row_idx]
+        mu = self.distmu[row_idx]
         sigma = self.distsig[row_idx]
-        norm = self.GW_data['DISTNORM'][row_idx]
+        norm = self.distnorm[row_idx]
         prob_2d = self.GW_data['PROBDENSITY'][row_idx]
-    
+        
+        # Handle sentinel values (-1 means no distance info)
+        if mu <= 0 or sigma <= 0 or norm <= 0:
+            return self.credible_levels[row_idx], 0.0
+
         gaussian = 1 / (np.sqrt(2 * np.pi) * sigma) * np.exp(-0.5 * ((dist_mpc - mu) / sigma) ** 2)
         dp_dv = norm * gaussian * prob_2d
         return self.credible_levels[row_idx], dp_dv

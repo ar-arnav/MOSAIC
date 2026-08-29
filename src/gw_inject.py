@@ -48,14 +48,26 @@ def generate_pairs(optical_path, gw_maps, out_path):
         gw = GW_data(map_path)
         print(f'Processed {map_path}...')
 
+        # Pre-normalize pixel probabilities for sampling
+        pixel_prob_normalized = gw.pixel_prob / gw.pixel_prob.sum()
+        
+        # Create weighted probability for pixels with VALID distance info
+        # This ensures KN distance sampling always gets valid mu/sigma
+        valid_dist_mask = gw.has_valid_distance
+        if valid_dist_mask.sum() > 0:
+            valid_pixel_prob = pixel_prob_normalized * valid_dist_mask
+            valid_pixel_prob = valid_pixel_prob / valid_pixel_prob.sum()
+        else:
+            valid_pixel_prob = pixel_prob_normalized
+
         for i in batch:
             row = optical_df[optical_df['objectId'] == i].iloc[0]
             label = row['label_class']
             
             if label == 1:
                 # KILONOVA: True GW Counterpart
-                # 1. Sample sky pixel proportional to GW 2D spatial probability density
-                pix_idx = np.random.choice(len(gw.pixel_prob), p=gw.pixel_prob)
+                # Sample from pixels with valid distance info
+                pix_idx = np.random.choice(len(valid_pixel_prob), p=valid_pixel_prob)
                 uniq_val = gw.uniq[pix_idx]
                 lvl, px = ah.uniq_to_level_ipix(uniq_val)
                 ns = ah.level_to_nside(lvl)
@@ -64,18 +76,23 @@ def generate_pairs(optical_path, gw_maps, out_path):
                 ra = np.degrees(lon).value + np.random.uniform(-0.05, 0.05)
                 dec = np.degrees(lat).value + np.random.uniform(-0.05, 0.05)
                 
-                # 2. Distance MUST match the 3D GW posterior at this pixel (mu, sigma)
-                # Drawing distance from the map's pixel posterior guarantees physical consistency
+                # Distance from GW posterior
                 dist = np.random.normal(gw.distmu[pix_idx], gw.distsig[pix_idx])
-                dist = max(5.0, dist)  # Enforce positive physical distance
+                dist = max(5.0, dist)
                 
             else:
-                # IMPOSTER: Uncorrelated Background Alert
-                # 1. Position is uniform across the sky (uncorrelated with GW beam)
-                ra = np.random.uniform(0, 360)
-                dec = np.degrees(np.arcsin(np.random.uniform(-1, 1)))
+                # IMPOSTER: Inside GW contour (FIXED - no spatial leakage)
+                # Sample from full GW sky map (not just valid distance pixels)
+                pix_idx = np.random.choice(len(pixel_prob_normalized), p=pixel_prob_normalized)
+                uniq_val = gw.uniq[pix_idx]
+                lvl, px = ah.uniq_to_level_ipix(uniq_val)
+                ns = ah.level_to_nside(lvl)
+                lon, lat = ah.healpix_to_lonlat(px, ns, order='nested')
                 
-                # 2. Distance comes from independent 10-200 Mpc volumetric sampling
+                ra = np.degrees(lon).value + np.random.uniform(-0.05, 0.05)
+                dec = np.degrees(lat).value + np.random.uniform(-0.05, 0.05)
+                
+                # Independent distance (NOT from GW posterior)
                 dist = row['dist_mpc']
 
             cred_level, dp_dv = gw.evaluate_candidate(ra, dec, dist)
