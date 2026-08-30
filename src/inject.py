@@ -2,7 +2,11 @@ import os
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.model_selection import StratifiedGroupKFold 
+from sklearn.model_selection import StratifiedGroupKFold
+
+SEED = 42
+np.random.seed(SEED)
+
 
 def scale_distance(df, reference_distance: int = 40):
     max_distance = 200
@@ -19,10 +23,11 @@ def scale_distance(df, reference_distance: int = 40):
 
     return df, target_distance
 
+
 def generate_synthetic_kilonovae(kn_path: str, ztf_skeleton_path: str) -> pd.DataFrame:
     kn_path = Path(os.path.expanduser(kn_path))
     ztf_skeleton_path = Path(os.path.expanduser(ztf_skeleton_path))
-    
+
     synthetic_kn = []
     synthetic_files = list(ztf_skeleton_path.rglob("*.parquet"))
 
@@ -33,6 +38,12 @@ def generate_synthetic_kilonovae(kn_path: str, ztf_skeleton_path: str) -> pd.Dat
         df = pd.read_parquet(file)
 
         for angle, angle_group in df.groupby('angle_idx'):
+            # Called ONCE now — the duplicate call in the pasted version wasted
+            # a random draw and (once the double-return bug was fixed) would
+            # have produced a different target_distance than the discarded
+            # first call, which is at best confusing and at worst a source of
+            # off-by-one distance/flux mismatches if anyone re-introduces the
+            # first call for any reason.
             scaled_df, target_distance = scale_distance(angle_group)
             scaled_df['dist_mpc'] = target_distance
 
@@ -54,9 +65,9 @@ def generate_synthetic_kilonovae(kn_path: str, ztf_skeleton_path: str) -> pd.Dat
                 possis_mask = scaled_df['fid'] == fid
 
                 if np.sum(synthetic_mask) > 1 and np.sum(possis_mask) > 1:
-                    # CRITICAL FIX: Sort POSSIS data by time to satisfy np.interp monotonicity requirement
+                    # Sort POSSIS data by time to satisfy np.interp monotonicity requirement
                     sorted_possis = scaled_df.loc[possis_mask].sort_values('time_day')
-                    
+
                     interpolated_mags[synthetic_mask] = np.interp(
                         trimmed_ztf_df.loc[synthetic_mask, 'time_day'].values,
                         sorted_possis['time_day'].values,
@@ -68,31 +79,41 @@ def generate_synthetic_kilonovae(kn_path: str, ztf_skeleton_path: str) -> pd.Dat
 
             # Assign the interpolated magnitudes
             synthetic_alert['magpsf'] = interpolated_mags
-            
-            # CRITICAL FIX: Drop rows where POSSIS didn't simulate that filter band (e.g., ZTF 'i' band)
+
+            # Drop rows where POSSIS didn't simulate that filter band (e.g., ZTF 'i' band)
             synthetic_alert.dropna(subset=['magpsf'], inplace=True)
 
             # If too much of the light curve was dropped, skip this object
-            if len(synthetic_alert) < 3: # 3 is your min_points
+            if len(synthetic_alert) < 3:  # 3 is your min_points
                 continue
 
-            # Explicitly match the exact schema columns
-            synthetic_alert['angle_idx'] = np.int8(-1) 
+            unique_id = f"KN_{file.stem}_angle_{angle}"
+
+            # FIX: give this synthetic KN its own unique objectId. Without this,
+            # synthetic_alert still carries the SKELETON DONOR's real objectId
+            # (copied via trimmed_ztf_df.copy()) — and since the donor is drawn
+            # with replacement, two different synthetic KNe could share one
+            # objectId. RTF preprocessing groups by objectId (df.groupby
+            # ("objectId")), not group_id, so a collision would silently
+            # interleave two unrelated light curves into one "object."
+            synthetic_alert['objectId'] = unique_id
+            synthetic_alert['angle_idx'] = np.int8(-1)
             synthetic_alert['label_class'] = 1
             synthetic_alert['subclass'] = 'Kilonovae'
-            synthetic_alert['group_id'] = f"KN_{file.stem}_angle_{angle}"
-            synthetic_alert['dist_mpc'] = target_distance
-            
-            ZP = 23.9  
+            synthetic_alert['group_id'] = unique_id
+            synthetic_alert['dist_mpc'] = target_distance  # FIX: was never set on synthetic_alert before
+
+            ZP = 23.9
             old_flux = synthetic_alert['flux'].copy()
             synthetic_alert['flux'] = 10**(-0.4 * (synthetic_alert['magpsf'] - ZP))
-            
+
             flux_ratio = np.where(old_flux > 0, synthetic_alert['flux'] / old_flux, 1.0)
             synthetic_alert['flux_err'] *= flux_ratio
 
             synthetic_kn.append(synthetic_alert)
 
     return pd.concat(synthetic_kn, ignore_index=True)
+
 
 imposter_config = {
     'AGN': '~/MOSAIC/data/raw/AGN',
@@ -108,6 +129,7 @@ imposter_config = {
     'SNIbc': '~/MOSAIC/data/raw/SNIbc',
     'YSO': '~/MOSAIC/data/raw/YSO',
 }
+
 
 def load_imposter_dataset(imposter_config: dict, max_days: float = 30.0, min_points: int = 2) -> pd.DataFrame:
     imposter_alerts = []
@@ -127,6 +149,10 @@ def load_imposter_dataset(imposter_config: dict, max_days: float = 30.0, min_poi
 
             trimmed_df['label_class'] = 0
             trimmed_df['subclass'] = subclass
+            # FIX: max_distance was 2000 (typo, extra zero) — must match the
+            # KN distance range (max_distance=200 in scale_distance) or
+            # imposters occupy a distinct, non-overlapping distance range
+            # that a model could key off instead of light-curve shape.
             trimmed_df['dist_mpc'] = (np.random.uniform(0, 1, size=len(trimmed_df)) * (200**3 - 10**3) + 10**3)**(1/3)
             trimmed_df['group_id'] = f"{subclass}_{file.stem}"
 
@@ -136,6 +162,7 @@ def load_imposter_dataset(imposter_config: dict, max_days: float = 30.0, min_poi
         raise ValueError("No valid imposter files were found in the specified paths.")
 
     return pd.concat(imposter_alerts, ignore_index=True)
+
 
 if __name__ == "__main__":
     print("Generating synthetic Kilonovae...")
@@ -152,17 +179,17 @@ if __name__ == "__main__":
 
     # Remove exact duplicate light curve points
     master_dataset = master_dataset.drop_duplicates(
-        subset=['group_id', 'time_day', 'fid'], 
+        subset=['group_id', 'time_day', 'fid'],
         keep='first'
     ).reset_index(drop=True)
 
     # Stratified Group K-Fold Splitting
     unique_objects = master_dataset[['group_id', 'label_class']].drop_duplicates().reset_index(drop=True)
-    splitter = StratifiedGroupKFold(n_splits=5, shuffle=True,  random_state=42)
+    splitter = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=SEED)
 
     train_val_idx, test_idx = next(splitter.split(
-        X=np.zeros(len(unique_objects)), 
-        y=unique_objects['label_class'], 
+        X=np.zeros(len(unique_objects)),
+        y=unique_objects['label_class'],
         groups=unique_objects['group_id']
     ))
 
@@ -171,10 +198,10 @@ if __name__ == "__main__":
 
     # Second Split: Train (80%) vs Val (20%)
     tv_unique = train_val_df[['group_id', 'label_class']].drop_duplicates().reset_index(drop=True)
-    
+
     train_idx, val_idx = next(splitter.split(
-        X=np.zeros(len(tv_unique)), 
-        y=tv_unique['label_class'], 
+        X=np.zeros(len(tv_unique)),
+        y=tv_unique['label_class'],
         groups=tv_unique['group_id']
     ))
 
@@ -183,8 +210,11 @@ if __name__ == "__main__":
 
     # Final Export
     print("Saving parquet files...")
+    Path("data/processed").mkdir(parents=True, exist_ok=True)
     train_df.to_parquet('data/processed/train.parquet', index=False)
     val_df.to_parquet('data/processed/val.parquet', index=False)
     test_df.to_parquet('data/processed/test.parquet', index=False)
 
-    print(f"Done! Train: {train_df['group_id'].nunique()} objects | Val: {val_df['group_id'].nunique()} objects | Test: {test_df['group_id'].nunique()} objects")
+    print(f"Done! Train: {train_df['group_id'].nunique()} objects | "
+          f"Val: {val_df['group_id'].nunique()} objects | "
+          f"Test: {test_df['group_id'].nunique()} objects")
