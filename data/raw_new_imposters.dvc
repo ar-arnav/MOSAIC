@@ -1,0 +1,6 @@
+outs:
+- md5: e5c9e9c915e2891059e349eaf6cf50c4.dir
+  size: 17387601
+  nfiles: 1460
+  hash: md5
+  path: raw_new_imposters

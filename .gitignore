@@ -207,5 +207,27 @@ marimo/_lsp/
 __marimo__/
 .vscode/
 gdrive-credentials.json
-.dvc/
-*.dvc
+
+# ---- DVC (keep metadata in Git; ignore cache only) ----
+.dvc/cache
+.dvc/tmp
+.dvc/tmp-*/
+.dvc/partial
+
+# DO NOT ignore *.dvc  — those must be committed
+# DO NOT ignore .dvc/config
+
+# ---- large data (contents only) ----
+data/possis_ztf_clean_v2/**
+data/raw_new_imposters/**
+data/possis_hdf5_tmp/**
+data/processed/**
+*.hdf5
+*.h5
+
+# keep the small DVC sidecar files
+!data/*.dvc
+!data/**/*.dvc
+
+gdrive-credentials.json
+.vscode/
