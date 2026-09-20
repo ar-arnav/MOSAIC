@@ -38,8 +38,8 @@ class RTFEncoderOnly(nn.Module):
 # --------------------------------
 
 def export_onnx(checkpoint_path="docs/Model W&B/RTF_MOSAIC/rtf_encoder_clf_calibrated.pt", 
-                filename="models/rtf_encoder_latents.onnx",  # <--- CHANGED OUTPUT PATH
-                stats_filename="docs/Model W&B/RTF_MOSAIC/mosaic_rtf_stats.json"):
+                filename="models/rtf_encoder_latents.onnx",  
+                stats_filename="models/RTF_MOSAIC/mosaic_rtf_stats.json"):
     
     model = RTFEncoderOnly().to(device)
     
