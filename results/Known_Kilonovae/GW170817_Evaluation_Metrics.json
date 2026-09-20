@@ -1,0 +1,21 @@
+{
+    "execution_timestamp": "2026-09-20T14:41:40.797695",
+    "event_id": "GW170817",
+    "target_coordinates": {
+        "ra": 197.45037,
+        "dec": -23.38148
+    },
+    "gw_sky_crossmatch": {
+        "gw_pixel_probability": 2.8423852166208575e-05,
+        "gw_credible_level": 0.5558404545709545,
+        "gw_distance_mpc": 38.58408098548171,
+        "gw_distance_err_mpc": 8.195418621454472
+    },
+    "mosaic_inference": {
+        "p_kn": 0.7915865153111363,
+        "onnx_executed": true,
+        "derived_fade_rate": 1.0913246870040894,
+        "derived_g_r_color": 0.581119179725647
+    },
+    "final_classification": "KILONOVA"
+}
