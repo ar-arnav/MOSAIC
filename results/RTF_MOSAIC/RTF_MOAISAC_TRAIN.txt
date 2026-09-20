@@ -1,0 +1,198 @@
+ Fitting global stats on /content/train.parquet...
+  log_dt           med=   0.0051 iqr=   0.0766
+  log_dt_prev      med=   0.0005 iqr=   0.0196
+  logflux          med=  -7.5377 iqr=   0.7114
+  logflux_err      med=   0.0415 iqr=   0.0343
+  sharpnr          med=   0.0000 iqr=   0.0000
+  scorr            med=   0.0000 iqr=   0.0000
+  diffmaglim       med=  20.2018 iqr=   0.9945
+  sky              med=   0.0000 iqr=   0.0000
+  sigmapsf         med=   0.1038 iqr=   0.0857
+  chinr            med=   0.0000 iqr=   0.0000
+  rb               med=   0.0000 iqr=   0.0000
+  chipsf           med=   0.0000 iqr=   0.0000
+  distnr           med=   0.0000 iqr=   0.0000
+  magnr            med=   0.0000 iqr=   0.0000
+  fwhm             med=   0.0000 iqr=   0.0000
+Loading /content/train.parquet...
+  -> 3331 objects  KN=906  imp=2425
+Loading /content/val.parquet...
+  -> 1033 objects  KN=222  imp=811
+BCE plain — balance via WeightedRandomSampler only
+Epoch 01/80  loss 0.5546/0.4685  AUC 0.8544/0.8405  AP 0.7500/0.7125  (6.1s)
+Epoch 02/80  loss 0.3847/0.3459  AUC 0.8824/0.8694  AP 0.8141/0.7651  (6.0s)
+Epoch 03/80  loss 0.3127/0.3017  AUC 0.9242/0.8981  AP 0.8642/0.7999  (6.3s)
+Epoch 04/80  loss 0.2661/0.2706  AUC 0.9473/0.9179  AP 0.8969/0.8291  (6.2s)
+Epoch 05/80  loss 0.2535/0.2626  AUC 0.9576/0.9292  AP 0.9109/0.8410  (6.2s)
+Epoch 06/80  loss 0.2201/0.2374  AUC 0.9637/0.9424  AP 0.9212/0.8620  (6.0s)
+Epoch 07/80  loss 0.2158/0.2377  AUC 0.9685/0.9444  AP 0.9291/0.8622  (6.0s)
+Epoch 08/80  loss 0.2273/0.2425  AUC 0.9687/0.9453  AP 0.9293/0.8653  (5.8s)
+Epoch 09/80  loss 0.2003/0.2241  AUC 0.9718/0.9510  AP 0.9355/0.8759  (5.9s)
+Epoch 10/80  loss 0.2021/0.2237  AUC 0.9749/0.9532  AP 0.9416/0.8814  (5.8s)
+Epoch 11/80  loss 0.1928/0.2178  AUC 0.9757/0.9538  AP 0.9435/0.8848  (5.9s)
+Epoch 12/80  loss 0.2054/0.2248  AUC 0.9772/0.9540  AP 0.9467/0.8844  (5.8s)
+Epoch 13/80  loss 0.1880/0.2124  AUC 0.9778/0.9568  AP 0.9479/0.8912  (5.9s)
+Epoch 14/80  loss 0.1869/0.2114  AUC 0.9799/0.9597  AP 0.9513/0.8955  (5.9s)
+Epoch 15/80  loss 0.1826/0.2052  AUC 0.9791/0.9596  AP 0.9501/0.8980  (5.9s)
+Epoch 16/80  loss 0.1835/0.2065  AUC 0.9792/0.9600  AP 0.9501/0.8982  (5.9s)
+Epoch 17/80  loss 0.1818/0.2093  AUC 0.9816/0.9581  AP 0.9560/0.8931  (6.0s)
+Epoch 18/80  loss 0.1887/0.2104  AUC 0.9807/0.9600  AP 0.9537/0.8984  (6.0s)
+Epoch 19/80  loss 0.1812/0.2022  AUC 0.9795/0.9603  AP 0.9519/0.9005  (6.0s)
+Epoch 20/80  loss 0.1645/0.1980  AUC 0.9807/0.9615  AP 0.9545/0.9035  (6.0s)
+Epoch 21/80  loss 0.1784/0.1996  AUC 0.9810/0.9618  AP 0.9547/0.9043  (5.9s)
+Epoch 22/80  loss 0.1919/0.2109  AUC 0.9823/0.9610  AP 0.9573/0.9020  (5.9s)
+Epoch 23/80  loss 0.1747/0.1986  AUC 0.9816/0.9604  AP 0.9569/0.9033  (5.9s)
+Epoch 24/80  loss 0.1693/0.1964  AUC 0.9814/0.9605  AP 0.9566/0.9033  (5.9s)
+Epoch 25/80  loss 0.1734/0.2000  AUC 0.9825/0.9603  AP 0.9588/0.9012  (5.8s)
+Epoch 26/80  loss 0.1701/0.1947  AUC 0.9822/0.9628  AP 0.9580/0.9070  (5.9s)
+Epoch 27/80  loss 0.1551/0.1924  AUC 0.9838/0.9640  AP 0.9615/0.9068  (5.8s)
+Epoch 28/80  loss 0.1694/0.1921  AUC 0.9822/0.9633  AP 0.9579/0.9081  (5.9s)
+Epoch 29/80  loss 0.1679/0.1924  AUC 0.9828/0.9633  AP 0.9592/0.9081  (5.8s)
+Epoch 30/80  loss 0.1652/0.1947  AUC 0.9829/0.9630  AP 0.9593/0.9057  (5.9s)
+Epoch 31/80  loss 0.1713/0.1963  AUC 0.9832/0.9633  AP 0.9603/0.9069  (5.8s)
+Epoch 32/80  loss 0.1635/0.1937  AUC 0.9817/0.9621  AP 0.9573/0.9050  (6.0s)
+Epoch 33/80  loss 0.1655/0.1930  AUC 0.9830/0.9634  AP 0.9598/0.9072  (5.9s)
+Epoch 34/80  loss 0.1554/0.1896  AUC 0.9831/0.9636  AP 0.9599/0.9084  (6.0s)
+Epoch 35/80  loss 0.1643/0.1914  AUC 0.9850/0.9654  AP 0.9639/0.9113  (5.9s)
+Epoch 36/80  loss 0.1531/0.1861  AUC 0.9848/0.9647  AP 0.9640/0.9128  (6.0s)
+Epoch 37/80  loss 0.1578/0.1871  AUC 0.9844/0.9640  AP 0.9633/0.9123  (5.9s)
+Epoch 38/80  loss 0.1566/0.1880  AUC 0.9837/0.9630  AP 0.9619/0.9105  (6.0s)
+Epoch 39/80  loss 0.1577/0.1893  AUC 0.9850/0.9638  AP 0.9644/0.9101  (5.8s)
+Epoch 40/80  loss 0.1609/0.1876  AUC 0.9846/0.9646  AP 0.9631/0.9127  (5.9s)
+Epoch 41/80  loss 0.1525/0.1860  AUC 0.9850/0.9647  AP 0.9640/0.9118  (5.8s)
+Epoch 42/80  loss 0.1625/0.1872  AUC 0.9846/0.9652  AP 0.9633/0.9138  (5.9s)
+Epoch 43/80  loss 0.1550/0.1891  AUC 0.9856/0.9640  AP 0.9655/0.9098  (5.9s)
+Epoch 44/80  loss 0.1615/0.1888  AUC 0.9842/0.9636  AP 0.9625/0.9117  (5.9s)
+Epoch 45/80  loss 0.1595/0.1881  AUC 0.9845/0.9638  AP 0.9632/0.9120  (5.9s)
+Epoch 46/80  loss 0.1534/0.1861  AUC 0.9850/0.9641  AP 0.9645/0.9121  (5.9s)
+Epoch 47/80  loss 0.1499/0.1849  AUC 0.9849/0.9646  AP 0.9641/0.9133  (5.9s)
+Epoch 48/80  loss 0.1542/0.1859  AUC 0.9853/0.9649  AP 0.9649/0.9124  (5.9s)
+Epoch 49/80  loss 0.1602/0.1877  AUC 0.9850/0.9650  AP 0.9642/0.9130  (6.0s)
+Epoch 50/80  loss 0.1544/0.1885  AUC 0.9851/0.9642  AP 0.9645/0.9101  (5.9s)
+Epoch 51/80  loss 0.1556/0.1885  AUC 0.9851/0.9639  AP 0.9646/0.9102  (5.9s)
+Epoch 52/80  loss 0.1596/0.1886  AUC 0.9849/0.9643  AP 0.9643/0.9119  (5.9s)
+Epoch 53/80  loss 0.1517/0.1863  AUC 0.9844/0.9634  AP 0.9636/0.9113  (5.9s)
+Epoch 54/80  loss 0.1552/0.1878  AUC 0.9851/0.9634  AP 0.9649/0.9101  (5.8s)
+Epoch 55/80  loss 0.1572/0.1879  AUC 0.9848/0.9637  AP 0.9640/0.9109  (5.9s)
+Epoch 56/80  loss 0.1553/0.1883  AUC 0.9847/0.9635  AP 0.9640/0.9101  (5.8s)
+Epoch 57/80  loss 0.1573/0.1902  AUC 0.9855/0.9637  AP 0.9657/0.9086  (5.9s)
+Epoch 58/80  loss 0.1557/0.1874  AUC 0.9852/0.9647  AP 0.9649/0.9118  (5.9s)
+Epoch 59/80  loss 0.1546/0.1863  AUC 0.9849/0.9648  AP 0.9641/0.9118  (6.0s)
+Epoch 60/80  loss 0.1605/0.1884  AUC 0.9850/0.9650  AP 0.9642/0.9125  (5.9s)
+Epoch 61/80  loss 0.1587/0.1870  AUC 0.9848/0.9651  AP 0.9640/0.9131  (6.0s)
+Epoch 62/80  loss 0.1551/0.1862  AUC 0.9844/0.9647  AP 0.9629/0.9118  (5.9s)
+Epoch 63/80  loss 0.1541/0.1861  AUC 0.9850/0.9651  AP 0.9642/0.9118  (5.9s)
+Epoch 64/80  loss 0.1550/0.1864  AUC 0.9853/0.9653  AP 0.9649/0.9123  (5.9s)
+Epoch 65/80  loss 0.1542/0.1855  AUC 0.9854/0.9654  AP 0.9651/0.9129  (5.9s)
+Epoch 66/80  loss 0.1524/0.1847  AUC 0.9855/0.9655  AP 0.9653/0.9131  (5.8s)
+Epoch 67/80  loss 0.1526/0.1846  AUC 0.9853/0.9654  AP 0.9650/0.9132  (5.9s)
+Epoch 68/80  loss 0.1517/0.1844  AUC 0.9851/0.9654  AP 0.9644/0.9131  (5.9s)
+Epoch 69/80  loss 0.1530/0.1846  AUC 0.9852/0.9655  AP 0.9648/0.9135  (5.9s)
+Epoch 70/80  loss 0.1550/0.1851  AUC 0.9854/0.9656  AP 0.9651/0.9139  (5.9s)
+Epoch 71/80  loss 0.1561/0.1854  AUC 0.9854/0.9657  AP 0.9650/0.9139  (6.0s)
+Epoch 72/80  loss 0.1566/0.1855  AUC 0.9854/0.9658  AP 0.9650/0.9141  (5.9s)
+Epoch 73/80  loss 0.1574/0.1858  AUC 0.9854/0.9658  AP 0.9652/0.9142  (5.9s)
+Epoch 74/80  loss 0.1572/0.1858  AUC 0.9855/0.9659  AP 0.9653/0.9142  (5.9s)
+Epoch 75/80  loss 0.1565/0.1856  AUC 0.9856/0.9659  AP 0.9655/0.9141  (5.9s)
+Epoch 76/80  loss 0.1562/0.1854  AUC 0.9856/0.9659  AP 0.9654/0.9141  (6.0s)
+Epoch 77/80  loss 0.1562/0.1854  AUC 0.9856/0.9659  AP 0.9654/0.9140  (5.9s)
+Epoch 78/80  loss 0.1561/0.1854  AUC 0.9856/0.9659  AP 0.9654/0.9141  (5.9s)
+Epoch 79/80  loss 0.1561/0.1854  AUC 0.9856/0.9659  AP 0.9654/0.9140  (5.9s)
+Epoch 80/80  loss 0.1560/0.1853  AUC 0.9855/0.9659  AP 0.9654/0.9140  (5.9s)
+Best val AP = 0.9142
+
+
+ Loading /content/val.parquet...
+  -> 1033 objects  KN=222  imp=811
+
+Val: N=1033 KN=222 Imp=811
+  KN mean P=0.7116  Imp mean P=0.0568
+  ROC-AUC=0.9658  AP=0.9142
+  TPR>=0.90 → thr=0.1391  FPR=0.1048  TN=726 FP=85 FN=22 TP=200
+  TPR>=0.95 → thr=0.0884  FPR=0.1973  TN=651 FP=160 FN=11 TP=211
+Loading /content/test.parquet...
+  -> 1274 objects  KN=248  imp=1026
+
+Test: N=1274 KN=248 Imp=1026
+  KN mean P=0.7785  Imp mean P=0.0576
+  ROC-AUC=0.9740  AP=0.9297
+  TPR>=0.90 → thr=0.2219  FPR=0.0634  TN=961 FP=65 FN=24 TP=224
+  TPR>=0.95 → thr=0.1067  FPR=0.1491  TN=873 FP=153 FN=12 TP=236
+
+Test @ val TPR>=0.95 thr=0.0884: TN=830 FP=196 FN=10 TP=238
+FP by subclass:
+  SNIa                 41
+  RR Lyrae             36
+  E                    33
+  LPV                  21
+  YSO                  14
+  AGN                  13
+  CV                   10
+  SNII                 8
+  SNIbc                7
+  DSCT                 4
+Saved rtf_encoder_clf_calibrated.pt
+
+Logistic test AUC: 0.7758
+RTF test AUC:      0.9740
+Weights: {'n': np.float64(-0.015), 'dur': np.float64(0.052), 'peak': np.float64(0.165), 'mean_m': np.float64(1.632), 'std_m': np.float64(0.702)}
+→ RTF adds meaningful sequence signal beyond scalars.
+
+Spearman(n_points, P) ALL=-0.156
+  KN: -0.195 (n=248)
+  Imp: -0.144 (n=1026)
+
+ Loading /content/test.parquet...
+  -> 1274 objects  KN=248  imp=1026
+=================================================================
+  MOSAIC MODEL EVALUATION METRICS (TEST SET)
+=================================================================
+  ROC-AUC Score:              0.9740
+  Average Precision (PR-AUC): 0.9297
+  Brier Score (Calibration):  0.0415
+-----------------------------------------------------------------
+  Operating Point @ TPR >= 0.95 (Threshold = 0.1067):
+    True Negatives (TN):  873   | False Positives (FP): 153
+    False Negatives (FN): 12    | True Positives (TP):  236
+    False Positive Rate (FPR): 0.1491
+
+=================================================================
+  IMPOSTER SUBCLASS BREAKDOWN (WHICH TYPES FOOL THE MODEL)
+=================================================================
+      subclass  total_count  fp_count  mean_p_kn  median_p_kn  max_p_kn  fp_rate
+      RR Lyrae          226        31   0.065876     0.002000  0.992376 0.137168
+          SNIa          215        30   0.043413     0.015164  0.354618 0.139535
+             E          153        27   0.058145     0.019931  0.430071 0.176471
+           LPV           99        15   0.063443     0.019495  0.376970 0.151515
+           YSO           37        12   0.082738     0.050081  0.299945 0.324324
+           AGN           71         9   0.057585     0.013244  0.936771 0.126761
+            CV           51         7   0.055142     0.025739  0.544646 0.137255
+         SNIbc           58         6   0.036452     0.012260  0.323583 0.103448
+          SNII           65         5   0.041669     0.025250  0.264299 0.076923
+     Supernova            7         4   0.343585     0.125445  0.909158 0.571429
+          DSCT            9         3   0.095867     0.062680  0.374463 0.333333
+        Blazar           13         2   0.040471     0.014689  0.247005 0.153846
+          SLSN           13         1   0.062546     0.060183  0.225810 0.076923
+           QSO            5         1   0.055230     0.000063  0.266390 0.200000
+Periodic-Other            3         0   0.016928     0.005822  0.042491 0.000000
+     Transient            1         0   0.015055     0.015055  0.015055 0.000000
+
+=================================================================
+  TOP 10 INDIVIDUAL IMPOSTERS WITH HIGHEST P(KN) SCORES
+=================================================================
+ subclass  prob_kn  n_points
+ RR Lyrae 0.992376         4
+ RR Lyrae 0.960986         4
+ RR Lyrae 0.945651         4
+      AGN 0.936771         4
+Supernova 0.909158         4
+ RR Lyrae 0.895362         4
+ RR Lyrae 0.740515         4
+Supernova 0.706204         4
+ RR Lyrae 0.674249         4
+Supernova 0.654391         3
+/tmp/ipykernel_893/1836405126.py:78: FutureWarning: 
+
+Passing `palette` without assigning `hue` is deprecated and will be removed in v0.14.0. Assign the `x` variable to `hue` and set `legend=False` for the same effect.
+
+  sns.boxplot(data=eval_df, x='subclass', y='prob_kn', ax=axes[0], palette='Set2')
